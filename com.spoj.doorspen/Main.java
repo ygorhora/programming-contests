@@ -11,17 +11,20 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.StringTokenizer;
 
-class Main {
+/**
+ * http://www.spoj.com/problems/DOORSPEN/
+ * @title DOORSPEN - Doors and Penguins
+ * @themes Convex Hull, Geometry 
+ * @author Ygor Hora
+ */
+public class Main {
 	public static void main(String[] args) throws java.lang.Exception {
 		
 		Reader sc = new Reader();
 		PrintWriter out = new PrintWriter(new BufferedOutputStream(System.out));
 		
 		int nDoors, nPenguins;
-		
 		LinkedList<Point2D> pointSetDoor, pointSetPenguin;
-		pointSetDoor = new LinkedList<>();
-		pointSetPenguin = new LinkedList<>();
 		
 		int caseTest = 1;
 		boolean firstTime = true;
@@ -31,6 +34,9 @@ class Main {
 			if(!firstTime){
 				out.println();
 			}
+			
+			pointSetDoor = new LinkedList<>();
+			pointSetPenguin = new LinkedList<>();
 			
 			for(int i = 0; i < nDoors; ++i){
 				Double x1 = sc.nextDouble();
@@ -57,12 +63,27 @@ class Main {
 			ConvexHull cvh = new ConvexHull();
 			LinkedList<Point2D> borderDoor = cvh.runMonotoneChain(pointSetDoor, true);
 			LinkedList<Point2D> borderPenguin = cvh.runMonotoneChain(pointSetPenguin, true);
+			/*
+			for(Point2D p: borderDoor){
+				out.println(p);
+			}
+			out.println();
+			for(Point2D p: borderPenguin){
+				out.println(p);
+			}*/
 			
-			ConvexPolygon polygon = new ConvexPolygon(borderDoor);
+			ConvexPolygon polygonDoor = new ConvexPolygon(borderDoor);
+			ConvexPolygon polygonPenguin = new ConvexPolygon(borderPenguin);
 			
 			boolean containsPoint = false;
 			for(Point2D point: borderPenguin){
-				if(polygon.contains(point)){
+				if(polygonDoor.contains(point)){
+					containsPoint = true;
+				}
+			}
+			
+			for(Point2D point: borderDoor){
+				if(polygonPenguin.contains(point)){
 					containsPoint = true;
 				}
 			}
@@ -81,6 +102,130 @@ class Main {
 		
 		out.flush();
 		out.close();
+	}
+}
+
+class Reader {
+	private BufferedReader br;
+	private StringTokenizer st;
+	
+	public Reader(){
+		br = new BufferedReader(new InputStreamReader(System.in));
+	}
+	
+	private String next(){
+		while (st == null || !st.hasMoreElements()){
+			try {
+				String line = br.readLine();
+				st = new StringTokenizer(line);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+		return st.nextToken();
+	}
+	
+	public int nextInt(){
+		return Integer.parseInt(next());
+	}
+	
+	public long nextLong(){
+		return Long.parseLong(next());
+	}
+	
+	public double nextDouble(){
+		return Double.parseDouble(next());
+	}
+	
+	public String nextLine(){
+		String str = "";
+		try {
+			str = br.readLine();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return str;
+	}
+}
+
+class Point2D implements Comparable<Point2D>{
+	private Double x;
+	private Double y;
+	
+	public Point2D(Double x, Double y){
+		this.x = x;
+		this.y = y;
+	}
+
+	@Override
+	public int compareTo(Point2D p){
+		int cmpx = this.getX().compareTo(p.getX());
+		if(cmpx == 0){
+			return this.getY().compareTo(p.getY());
+		}
+		
+		return cmpx;
+	}
+	
+	public int crossSignal(Point2D p, Double absError){
+		Double crossProd = cross(p);
+		
+		if(crossProd > -1 * Math.abs(absError) && crossProd < Math.abs(absError))
+			return 0;
+				
+		return (int) Math.signum(crossProd);
+	}
+	
+	public Double cross(Point2D p){
+		return this.getX() * p.getY() - this.getY() * p.getX();
+	}
+	
+	public Double getNorm(){
+		return Math.sqrt(this.x*this.x+this.y*this.y);
+	}
+	
+	public static Point2D getVector(Point2D src, Point2D dest){
+		return new Point2D(dest.getX() - src.getX(), dest.getY() - src.getY());
+	}
+	
+	public static double[] getArrayX(LinkedList<Point2D> points){
+		int size = points.size();
+		double[] res = new double[size];
+		
+		int cnt = 0;
+		for(Point2D p: points){
+			res[cnt++] = p.getX();
+		}
+		
+		return res;
+	}
+	
+	public static double[] getArrayY(LinkedList<Point2D> points){
+		int size = points.size();
+		double[] res = new double[size];
+		
+		int cnt = 0;
+		for(Point2D p: points){
+			res[cnt++] = p.getY();
+		}
+		
+		return res;
+	}
+	
+	public boolean equals(Point2D p){
+		return this.getX() == p.getX() && this.getY() == p.getY(); 
+	}
+	
+	public Double getX(){
+		return this.x;
+	}
+	
+	public Double getY(){
+		return this.y;
+	}
+	
+	public String toString(){
+		return "x: " + getX() + " y: " + getY();
 	}
 }
 
@@ -228,7 +373,9 @@ class ConvexPolygon {
 		Point2D vecToVertice = Point2D.getVector(pointPrev, pointNext);
 		Point2D vecToPoint = Point2D.getVector(pointPrev, point);
 		int signalRotation = vecToVertice.crossSignal(vecToPoint, 1.0e-7);
-		int rotation = signalRotation == 0? 1: signalRotation;
+		int rotationPrev = signalRotation == 0? 1: signalRotation;
+		
+		int rotation;
 		
 		while (it.hasNext()){
 			pointPrev = pointNext;
@@ -237,7 +384,10 @@ class ConvexPolygon {
 			vecToVertice = Point2D.getVector(pointPrev, pointNext);
 			vecToPoint = Point2D.getVector(pointPrev, point);
 			
-			if(rotation != vecToVertice.crossSignal(vecToPoint, 1.0e-7)){
+			signalRotation = vecToVertice.crossSignal(vecToPoint, 1.0e-7);
+			rotation = signalRotation == 0? 1: signalRotation;
+			
+			if(rotationPrev != rotation){
 				return false; 
 			}
 		}
@@ -248,7 +398,10 @@ class ConvexPolygon {
 		vecToVertice = Point2D.getVector(pointPrev, pointNext);
 		vecToPoint = Point2D.getVector(pointPrev, point);
 		
-		if(rotation != vecToVertice.crossSignal(vecToPoint, 1.0e-7)){
+		signalRotation = vecToVertice.crossSignal(vecToPoint, 1.0e-7);
+		rotation = signalRotation == 0? 1: signalRotation;
+		
+		if(rotationPrev != rotation){
 			return false; 
 		}
 		
@@ -256,126 +409,4 @@ class ConvexPolygon {
 	}
 }
 
-class Point2D implements Comparable<Point2D>{
-	private Double x;
-	private Double y;
-	
-	public Point2D(Double x, Double y){
-		this.x = x;
-		this.y = y;
-	}
 
-	@Override
-	public int compareTo(Point2D p){
-		int cmpx = this.getX().compareTo(p.getX());
-		if(cmpx == 0){
-			return this.getY().compareTo(p.getY());
-		}
-		
-		return cmpx;
-	}
-	
-	public int crossSignal(Point2D p, Double absError){
-		Double crossProd = cross(p);
-		
-		if(crossProd > -1 * Math.abs(absError) && crossProd < Math.abs(absError))
-			return 0;
-				
-		return (int) Math.signum(crossProd);
-	}
-	
-	public Double cross(Point2D p){
-		return this.getX() * p.getY() - this.getY() * p.getX();
-	}
-	
-	public Double getNorm(){
-		return Math.sqrt(this.x*this.x+this.y*this.y);
-	}
-	
-	public static Point2D getVector(Point2D src, Point2D dest){
-		return new Point2D(dest.getX() - src.getX(), dest.getY() - src.getY());
-	}
-	
-	public static double[] getArrayX(LinkedList<Point2D> points){
-		int size = points.size();
-		double[] res = new double[size];
-		
-		int cnt = 0;
-		for(Point2D p: points){
-			res[cnt++] = p.getX();
-		}
-		
-		return res;
-	}
-	
-	public static double[] getArrayY(LinkedList<Point2D> points){
-		int size = points.size();
-		double[] res = new double[size];
-		
-		int cnt = 0;
-		for(Point2D p: points){
-			res[cnt++] = p.getY();
-		}
-		
-		return res;
-	}
-	
-	public boolean equals(Point2D p){
-		return this.getX() == p.getX() && this.getY() == p.getY(); 
-	}
-	
-	public Double getX(){
-		return this.x;
-	}
-	
-	public Double getY(){
-		return this.y;
-	}
-	
-	public String toString(){
-		return "x: " + getX() + " y: " + getY();
-	}
-}
-
-class Reader {
-	private BufferedReader br;
-	private StringTokenizer st;
-	
-	public Reader(){
-		br = new BufferedReader(new InputStreamReader(System.in));
-	}
-	
-	private String next(){
-		while (st == null || !st.hasMoreElements()){
-			try {
-				String line = br.readLine();
-				st = new StringTokenizer(line);
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
-		return st.nextToken();
-	}
-	
-	public int nextInt(){
-		return Integer.parseInt(next());
-	}
-	
-	public long nextLong(){
-		return Long.parseLong(next());
-	}
-	
-	public double nextDouble(){
-		return Double.parseDouble(next());
-	}
-	
-	public String nextLine(){
-		String str = "";
-		try {
-			str = br.readLine();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		return str;
-	}
-}
